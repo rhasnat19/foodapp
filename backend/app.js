@@ -10,7 +10,7 @@ app.use(express.static("public"));
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST", "DELETE");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   next();
 });
@@ -18,6 +18,11 @@ app.use((req, res, next) => {
 app.get("/meals", async (req, res) => {
   const meals = await fs.readFile("./data/available-meals.json", "utf8");
   res.json(JSON.parse(meals));
+});
+
+app.get("/getOrders", async (req, res) => {
+  const orders = await fs.readFile("./data/orders.json", "utf8");
+  res.json(JSON.parse(orders));
 });
 
 app.post("/orders", async (req, res) => {
@@ -35,8 +40,8 @@ app.post("/orders", async (req, res) => {
     orderData.customer.name.trim() === "" ||
     orderData.customer.street === null ||
     orderData.customer.street.trim() === "" ||
-    orderData.customer["postal-code"] === null ||
-    orderData.customer["postal-code"].trim() === "" ||
+    orderData.customer.postalCode === null ||
+    orderData.customer.postalCode.trim() === "" ||
     orderData.customer.city === null ||
     orderData.customer.city.trim() === ""
   ) {

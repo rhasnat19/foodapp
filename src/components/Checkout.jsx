@@ -7,6 +7,13 @@ import Button from "./UI/Button";
 import UserProgressContext from "../store/UserProgressContext";
 import { useFormik } from "formik";
 import * as Yup from "yup";
+import useHttps from "../hooks/useHttps";
+import Error from "./Error";
+
+const requestConfig = {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+};
 
 export default function Checkout() {
   const cartCtx = useContext(CartContext);
@@ -17,30 +24,37 @@ export default function Checkout() {
     0
   );
 
+  const {
+    data,
+    isLoading: isSending,
+    error,
+    sendRequest,
+    clearData,
+  } = useHttps("http://localhost:3000/orders", requestConfig);
+
   const formik = useFormik({
     initialValues: {
-      fullName: "",
+      name: "",
       email: "",
       street: "",
       postalCode: "",
       city: "",
     },
     validationSchema: Yup.object({
-      fullName: Yup.string()
+      name: Yup.string()
         .max(15, "Must be 15 characters or less")
-        .required("Please enter first name"),
+        .required("Please enter name"),
       email: Yup.string()
         .email("Invalid email address")
         .required("Please enter email address"),
       street: Yup.string().required("Please enter street"),
       postalCode: Yup.string()
-        .min(6, "Must be 6 characters or greater")
+        .min(5, "Must be 5 characters or greater")
         .required("Please enter postal code"),
       city: Yup.string().required("Please enter city"),
     }),
     onSubmit: (values) => {
-      //   alert(JSON.stringify(values, null, 2));
-      console.log(values);
+      handleSubmit(values);
     },
   });
 
@@ -49,8 +63,51 @@ export default function Checkout() {
     formik.resetForm();
   }
 
-  function handleSubmit(event) {
-    event.preventDefault();
+  function handleFinish() {
+    userProgressCtx.hideCheckout();
+    formik.resetForm();
+    cartCtx.clearItem();
+    clearData();
+  }
+
+  async function handleSubmit(values) {
+    await sendRequest(
+      JSON.stringify({
+        order: {
+          items: cartCtx.items,
+          customer: values,
+        },
+      })
+    );
+  }
+
+  let action = (
+    <>
+      <Button type="button" textOnly onClick={handleClose}>
+        Close
+      </Button>
+      <Button type="submit">Submit Order</Button>
+    </>
+  );
+
+  if (isSending) {
+    action = <span>Sending Order Data..</span>;
+  }
+
+  if (data && !error) {
+    return (
+      <Modal
+        open={userProgressCtx.progress === "checkout"}
+        onClose={handleFinish}
+      >
+        <h2>Success!</h2>
+        <p>Your order was submitted successfully.</p>
+        <p>We will get back to you via email within few minutes</p>
+        <p className="modal-actions">
+          <Button onClick={handleFinish}>Okay</Button>
+        </p>
+      </Modal>
+    );
   }
 
   return (
@@ -65,12 +122,12 @@ export default function Checkout() {
           label="Full Name"
           type="text"
           id="full-name"
-          name="fullName"
+          name="name"
           onChange={formik.handleChange}
-          value={formik.values.fullName}
+          value={formik.values.name}
         />
-        {formik.touched.fullName && formik.errors.fullName ? (
-          <div className="error-message">{formik.errors.fullName}</div>
+        {formik.touched.name && formik.errors.name ? (
+          <div className="error-message">{formik.errors.name}</div>
         ) : null}
 
         <Input
@@ -123,12 +180,8 @@ export default function Checkout() {
             <div className="error-message">{formik.errors.city}</div>
           ) : null}
         </div>
-        <p className="modal-actions">
-          <Button type="button" textOnly onClick={handleClose}>
-            Close
-          </Button>
-          <Button type="submit">Submit Order</Button>
-        </p>
+        {error && <Error title="Failed to submit data" message={error} />}
+        <p className="modal-actions">{action}</p>
       </form>
     </Modal>
   );

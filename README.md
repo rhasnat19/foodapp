@@ -6,3 +6,5 @@
 5. A generic Modal in UI forlder
 6. Important learning notes. we can use useReducer and useState both for managing state of useContext()
 7. Checkout form with form validation.
+8. Implemented formik validation with Yup.
+9. useHttp hook implemented for both api calls -> GET and POST.
